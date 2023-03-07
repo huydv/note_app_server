@@ -1,8 +1,19 @@
 // A map of functions which return data for the schema.
 
-import fakeData from "../fakeData/index.js";
+// import fakeData from "../fakeData/index.js";
+import { GraphQLScalarType } from "graphql";
 import { AuthorModel, FolderModel, NoteModel } from "../models/index.js";
 export const resolvers = {
+  Date: new GraphQLScalarType({
+    name: "Date",
+    parseValue(value) {
+      return new Date(value);
+    },
+    serialize(value) {
+      return value.toISOString();
+    },
+  }),
+
   Query: {
     folders: async (req, res, context) => {
       const folders = await FolderModel.find({
@@ -40,6 +51,8 @@ export const resolvers = {
       // return fakeData.notes.filter((note) => note.folderId === parent.id);
       const notes = await NoteModel.find({
         folderId: parent.id,
+      }).sort({
+        updated: "desc",
       });
       return notes;
     },
@@ -50,12 +63,20 @@ export const resolvers = {
       await newNote.save();
       return newNote;
     },
+
+    updateNote: async (parent, args, context) => {
+      const noteId = args.id;
+      const note = NoteModel.findByIdAndUpdate(noteId, args);
+      return note;
+    },
+
     addFolder: async (parent, args, context) => {
       console.log(context);
       const newFolder = new FolderModel({ ...args, authorId: context.uid });
       await newFolder.save();
       return newFolder;
     },
+
     register: async (parent, args) => {
       const newAuthor = new AuthorModel(args);
       const findAuthor = AuthorModel.findOne({ uid: args.uid });
