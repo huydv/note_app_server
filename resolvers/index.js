@@ -1,11 +1,13 @@
 // A map of functions which return data for the schema.
 
 import fakeData from "../fakeData/index.js";
-import { FolderModel } from "../models/index.js";
+import { AuthorModel, FolderModel } from "../models/index.js";
 export const resolvers = {
   Query: {
-    folders: async () => {
-      const folders = await FolderModel.find();
+    folders: async (req, res, context) => {
+      const folders = await FolderModel.find({
+        authorId: context.uid,
+      });
       return folders;
       //return fakeData.folders;
     },
@@ -15,9 +17,11 @@ export const resolvers = {
       return folder;
       // return fakeData.folders.find((folder) => folder.id === folderId);
     },
-    note: (parent, args) => {
+    note: async (parent, args) => {
       const noteId = args.noteId;
-      return fakeData.notes.find((note) => note.id === noteId);
+      const note = await NoteModel.findOne({ _id: noteId });
+      return note;
+      // return fakeData.notes.find((note) => note.id === noteId);
     },
   },
 
@@ -31,10 +35,19 @@ export const resolvers = {
     },
   },
   Mutation: {
-    addFolder: async (parent, args) => {
-      const newFolder = new FolderModel({ ...args, authorId: "123" });
+    addFolder: async (parent, args, context) => {
+      const newFolder = new FolderModel({ ...args, authorId: context.uid });
       await newFolder.save();
       return newFolder;
+    },
+    register: async (parent, args) => {
+      const newAuthor = new AuthorModel(args);
+      const findAuthor = AuthorModel.findOne({ uid: args.uid });
+      if (!findAuthor) {
+        await newAuthor.save();
+        return newAuthor;
+      }
+      return findAuthor;
     },
   },
 };
